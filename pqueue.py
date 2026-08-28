@@ -10,12 +10,22 @@ class PQueue():
             for e in elems:
                 self.add_elem(e)
 
-    def add_elem(self, v):
-        self.elems.append(v)
-        i = len(self.elems)-1
-        while i > 0 and (self.comp(self.elems[i]) < self.comp(self.elems[(i-1)//2])):
-            self.swap(i, (i-1)//2)
-            i = (i-1)//2
+    def add_elem(self, v: [list, object]):
+        if not isinstance(v, list):
+            self.elems.append(v)
+            i = len(self.elems)-1
+            while i > 0 and (self.comp(self.elems[i]) < self.comp(self.elems[(i-1)//2])):
+                self.swap(i, (i-1)//2)
+                i = (i-1)//2
+        else:
+            for o in v:
+                self.elems.append(o)
+                i = len(self.elems)-1
+                while i > 0 and (self.comp(self.elems[i]) < self.comp(self.elems[(i-1)//2])):
+                    self.swap(i, (i-1)//2)
+                    i = (i-1)//2
+
+
 
     def peek(self):
         return copy(self.elems[0])
@@ -52,6 +62,9 @@ class PQueue():
 
     def swap(self, i, j) -> None:
         self.elems[i], self.elems[j] = self.elems[j], self.elems[i]
+        
+    def __bool__(self) -> bool:
+        return len(self.elems) > 0
 
     def __repr__(self) -> str:
         return self.__str__()

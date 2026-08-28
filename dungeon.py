@@ -1,105 +1,122 @@
-# TODO: PRIORITY QUEUE NOT CONNECTED WITH GRID. NEED TO REHEAP AFTER CHOOSING TILE
-
-from enum import Enum, auto
 from pqueue import PQueue
+from rooms import *
 import random
+from pprint import pprint
+from os import system as call
 
-class room():
-    value: int
-    width: int
-    height: int
-    doors: int # 0b(left)(right)(up)(down)
-
-    def __init__(self, value: int, width: int, height: int, doors: int) -> None:
-        self.value = value
-        self.width = width
-        self.height = height
-        self.doors = doors
-
-    def __repr__(self) -> str:
-        return self.__str__()
-    def __str__(self) -> str:
-        return str(self.value)
-
-
-class Rooms(Enum):
-    START = room(1, 3, 3, 0b0010)
-    hallway_VERT = room(2, 3, 5, 0b0011)
-    hallway_HORIZ = room(3, 5, 3, 0b1100)
-    intersection = room(4, 3, 3, 0b1111)
-    l_cap = room(5, 3, 3, 0b0100)
-    r_cap = room(6, 3, 3, 0b1000)
-    u_cap = room(7, 3, 3, 0b0001)
-    d_cap = room(8, 3, 3, 0b0010)
-
+# TEMP
+def cls():
+    call('cls')
+# TEMP
 
 class Dungeon():
-    size: int
-    grid: list
+    min_size: int
+    max_size: int
+    map: list
 
-    def __init__(self, size = 10) -> None:
-        self.size = size
-        self.grid = [[None for _ in range(size)] for _ in range(size)]
-        self.grid[size // 2][size // 2] = Rooms.START
-        max_rooms = 10
-        
-        # generate dungeon using wave function collapse
-        queue = PQueue([(size//2-1, size//2, [r for r in Rooms if r.value.doors & 0b0001])], lambda o: len(o[2]))
-        for _ in range(10):
-            if len(queue.elems) == 0: break
-            r = queue.pop()
-            if len(r[2]) == 1:
-                self.grid[r[0]][r[1]] = r[2][0]
-            else:
-                self.grid[r[0]][r[1]] = random.choice(r[2])
-            
-            y,x = r[0], r[1]
+    def __init__(self, min_size = 5, max_size = 10) -> None:
+        self.min_size = min_size
+        self.max_size = max_size
+        self.map = {(0,0): Rooms.START}
 
-            if x > 0 and self.grid[y][x-1] is None:
-                queue.add_elem((y, x-1, self.filter_tile(y,x-1)))
-            if y > 0 and self.grid[y-1][x] is None:
-                queue.add_elem((y-1, x, self.filter_tile(y-1,x)))
-            if x < size-1 and self.grid[y][x+1] is None:
-                queue.add_elem((y, x+1, self.filter_tile(y,x+1)))
-            if y < size-1 and self.grid[y+1][x] is None:
-                queue.add_elem((y+1, x, self.filter_tile(y+1,x)))
+        # WFC impl
+        queue = PQueue([(0,1,[r for r in Rooms.ALL() if r.value[1] & Directions.DOWN])], lambda o: len(o[2]))
+        while queue and len(self.map) < max_size:
+            # grab next tile
+            tile = queue.pop()
+            if (tile[0], tile[1]) in self.map: continue
+            x,y = tile[0], tile[1]
+            # collapse tile
+            val = random.choice(tile[2])
+            self.map[(x,y)] = val
             
-            print(self)
-            input()
+            # re-evaluate tiles based on choice
+            for i,v in enumerate(queue.elems):
+                queue.elems[i] = (v[0],v[1], self.limitTile(v[0], v[1]))
+
+            q = []
+            # add next tiles
+            if val.value[1] & Directions.UP and not (x,y+1) in self.map:
+                q.append((x,y+1,self.limitTile(x,y+1)))
+            if val.value[1] & Directions.DOWN and not (x,y-1) in self.map:
+                q.append((x,y-1,self.limitTile(x,y-1)))
+            if val.value[1] & Directions.LEFT and not (x-1,y) in self.map:
+                q.append((x-1,y,self.limitTile(x-1,y)))
+            if val.value[1] & Directions.RIGHT and not (x+1,y) in self.map:
+                q.append((x+1,y,self.limitTile(x+1,y)))
+            queue.add_elem(q)
+
+            # find next priority
+            queue.reheap()
+        # TODO: cap off the map
     
-    def filter_tile(self, r, c):
-        p = [r for r in Rooms if r.value != 1]
-        
-        if c > 0:
-            if self.grid[r][c-1] is not None:
-                if ~(self.grid[r][c-1].value.doors & 0b0100):
-                    p = [x for x in p if x.value.doors & 0b1000]
-        if r > 0:
-            if self.grid[r-1][c] is not None:
-                if ~(self.grid[r-1][c].value.doors & 0b0001):
-                    p = [x for x in p if x.value.doors & 0b0010]
-        if c < self.size-1:
-            if self.grid[r][c+1] is not None:
-                if ~(self.grid[r][c+1].value.doors & 0b1000):
-                    p = [x for x in p if x.value.doors & 0b0100]
-        if r < self.size-1:
-            if self.grid[r+1][c] is not None:
-                if ~(self.grid[r+1][c].value.doors & 0b0010):
-                    p = [x for x in p if x.value.doors & 0b0001]
+    def limitTile(self, x, y):
+        rooms = Rooms.ALL()
+        if len(self.map) < self.min_size: rooms = [r for r in rooms if r not in [Rooms.UP_CAP, Rooms.DOWN_CAP, Rooms.LEFT_CAP, Rooms.RIGHT_CAP]]
+        if (x,y-1) in self.map:
+            if self.map[(x,y-1)].value[1] & Directions.UP:
+                rooms = [r for r in rooms if r.value[1] & Directions.DOWN]
+            else:
+                rooms = [r for r in rooms if ~(r.value[1] & Directions.DOWN)]
+        if (x,y+1) in self.map:
+            if self.map[(x,y+1)].value[1] & Directions.DOWN:
+                rooms = [r for r in rooms if r.value[1] & Directions.UP]
+            else:
+                rooms = [r for r in rooms if ~(r.value[1] & Directions.UP)]
+        if (x-1,y) in self.map:
+            if self.map[(x-1,y)].value[1] & Directions.RIGHT:
+                rooms = [r for r in rooms if r.value[1] & Directions.LEFT]
+            else:
+                rooms = [r for r in rooms if ~(r.value[1] & Directions.LEFT)]
+        if (x+1,y) in self.map:
+            if self.map[(x+1,y)].value[1] & Directions.LEFT:
+                rooms = [r for r in rooms if r.value[1] & Directions.RIGHT]
+            else:
+                rooms = [r for r in rooms if ~(r.value[1] & Directions.RIGHT)]
+        return rooms
 
-        return p
+    def print_map(self):
+        if not self.map:
+            return
 
+        min_x = min(x for x, _ in self.map)
+        max_x = max(x for x, _ in self.map)
+        min_y = min(y for _, y in self.map)
+        max_y = max(y for _, y in self.map)
+
+        room_height =  5
+        room_width = 7
+
+        output = []
+
+        for y in range(max_y, min_y -1, -1):
+            row_lines = [""] * room_height
+
+            for x in range(min_x, max_x + 1):
+                room = self.map.get((x, y))
+
+                if room is None:
+                    lines = [" " * room_width] * room_height
+                else:
+                    lines = Rooms.tostr(room).splitlines()
+
+                for i, line in enumerate(lines):
+                    row_lines[i] += line
+
+            output.extend(row_lines)
+
+        print("\n".join(output))
+
+
+    # pretty print
     def __repr__(self) -> str:
         return self.__str__()
+
     def __str__(self) -> str:
-        o = ""
-        for y in self.grid:
-            for x in y:
-                o += (str(x.value) + " ") if x else ". "
-            o += "\n"
-        return o
+        return f"Dungeon<{self.map}>"
 
 __all__ = ["Dungeon"]
 
+# test case
 if __name__ == "__main__":
-    print(Dungeon())
+    Dungeon().print_map()
