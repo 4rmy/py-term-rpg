@@ -4,25 +4,27 @@ from dungeon import Dungeon
 
 class Game():
     active_profile: Player
-    active_dungeon: Dungeon
+    active_dungeon: Dungeon or None
 
+    def __init__(self) -> None:
+        active_profile = Player()
+
+    def startDungeon(self):
+        active_dungeon = Dungeon()
 
 if __name__ == "__main__":
-    print(Dungeon())
     Game()
 
 # TODO:
-
 # ITEMS
 # - Item Rarities
 #   - Weighted Loot
-
 # PLAYER
 # - Player Stat Calculations
 # - Player loading and saving
-
 # DUNGEON
-# - Dungeon wave function collapse
-
+# - Add enemies
+#   - enemy superclass
+# - Add loot
 # TUI (Game controller)
-# Pritty-fy TUI
+# - Pretty-fy TUI
