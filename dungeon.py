@@ -4,11 +4,6 @@ import random
 from pprint import pprint
 from os import system as call
 
-# TEMP
-def cls():
-    call('cls')
-# TEMP
-
 class Dungeon():
     min_size: int
     max_size: int
