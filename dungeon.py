@@ -20,7 +20,7 @@ class Dungeon():
         self.map = {(0,0): Rooms.START}
 
         # WFC impl
-        queue = PQueue([(0,1,[r for r in Rooms.ALL() if r.value[1] & Directions.DOWN])], lambda o: len(o[2]))
+        queue = PQueue([(0,1,self.limitTile(0,1))], lambda o: len(o[2]))
         while queue and len(self.map) < max_size:
             # grab next tile
             tile = queue.pop()
@@ -48,31 +48,52 @@ class Dungeon():
 
             # find next priority
             queue.reheap()
-        # TODO: cap off the map
+
+        for tile in queue.elems:
+            # skip filled tiles
+            x,y = tile[0], tile[1]
+            if (x,y) in self.map: continue
+            # cap
+            valid = 0
+            if (x-1,y) in self.map:
+                if self.map[(x-1,y)].value[1] & Directions.RIGHT:
+                    valid |= Directions.LEFT
+            if (x+1,y) in self.map:
+                if self.map[(x+1,y)].value[1] & Directions.LEFT:
+                    valid |= Directions.RIGHT
+            if (x,y-1) in self.map:
+                if self.map[(x,y-1)].value[1] & Directions.UP:
+                    valid |= Directions.DOWN
+            if (x,y+1) in self.map:
+                if self.map[(x,y+1)].value[1] & Directions.DOWN:
+                    valid |= Directions.UP
+
+            self.map[(x,y)] = random.choice([r for r in Rooms.ALL() if r.value[1] ^ valid == 0])
+
     
     def limitTile(self, x, y):
-        rooms = Rooms.ALL()
-        if len(self.map) < self.min_size: rooms = [r for r in rooms if r not in [Rooms.UP_CAP, Rooms.DOWN_CAP, Rooms.LEFT_CAP, Rooms.RIGHT_CAP]]
+        rooms = Rooms.NOCAPS() if len(self.map) < self.min_size else Rooms.ALL()
+        
         if (x,y-1) in self.map:
             if self.map[(x,y-1)].value[1] & Directions.UP:
                 rooms = [r for r in rooms if r.value[1] & Directions.DOWN]
             else:
-                rooms = [r for r in rooms if ~(r.value[1] & Directions.DOWN)]
+                rooms = [r for r in rooms if r.value[1] & Directions.DOWN == 0]
         if (x,y+1) in self.map:
             if self.map[(x,y+1)].value[1] & Directions.DOWN:
                 rooms = [r for r in rooms if r.value[1] & Directions.UP]
             else:
-                rooms = [r for r in rooms if ~(r.value[1] & Directions.UP)]
+                rooms = [r for r in rooms if r.value[1] & Directions.UP == 0]
         if (x-1,y) in self.map:
             if self.map[(x-1,y)].value[1] & Directions.RIGHT:
                 rooms = [r for r in rooms if r.value[1] & Directions.LEFT]
             else:
-                rooms = [r for r in rooms if ~(r.value[1] & Directions.LEFT)]
+                rooms = [r for r in rooms if r.value[1] & Directions.LEFT == 0]
         if (x+1,y) in self.map:
             if self.map[(x+1,y)].value[1] & Directions.LEFT:
                 rooms = [r for r in rooms if r.value[1] & Directions.RIGHT]
             else:
-                rooms = [r for r in rooms if ~(r.value[1] & Directions.RIGHT)]
+                rooms = [r for r in rooms if r.value[1] & Directions.RIGHT == 0]
         return rooms
 
     def print_map(self):

@@ -34,12 +34,19 @@ class Rooms(Enum):
         return [r for r in Rooms if r != Rooms.START]
 
     @staticmethod
+    def NOCAPS():
+        global caps
+        return [r for r in Rooms.ALL() if r not in caps]
+
+    @staticmethod
     def tostr(room):
         return f"+={'   ' if room.value[1] & Directions.UP else '==='}=+\n" + \
                 f"|     |\n" + \
-                f"{' ' if room.value[1] & Directions.LEFT else '|'} {' ' * (2-len(str(room.value[0]))) + str(room.value[0])}  {' ' if room.value[1] & Directions.RIGHT else '|'}\n" + \
+                f"{' ' if room.value[1] & Directions.LEFT else '|'}     {' ' if room.value[1] & Directions.RIGHT else '|'}\n" + \
                 f"|     |\n" + \
                 f"+={'   ' if room.value[1] & Directions.DOWN else '==='}=+"
+
+caps = set([Rooms.UP_CAP, Rooms.DOWN_CAP, Rooms.LEFT_CAP, Rooms.RIGHT_CAP])
 
 __ALL__ = ["Directions", "Rooms"]
 
